@@ -1,9 +1,9 @@
-PI_IP_ADDRESS=10.0.0.172
-PI_USERNAME=pi
+PI_IP_ADDRESS=10.0.2.224
+PI_USERNAME=ryder
 
 .PHONY: run
 run:
-	@docker-compose up
+	@cd src && python app.py
 
 .PHONY: install
 install:
@@ -17,6 +17,10 @@ copy:
 shell:
 	@ssh $(PI_USERNAME)@$(PI_IP_ADDRESS)
 
-.PHONY: build
-build:
-	@docker-compose build
+.PHONY: ssh
+ssh:
+	@make shell
+
+.phony: ping
+ping:
+	@ping $(PI_IP_ADDRESS)

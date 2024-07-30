@@ -6,23 +6,39 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import redis
 import atexit
 from flask_cors import CORS, cross_origin
+from audio_player import AudioPlayer
+
 
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 aqm = AirQualityMonitor()
+player = AudioPlayer(volume=90)
+
+
+def aqi_alert(aqi_limit=20):
+    current_measurement = aqm.get_measurement()
+    aqi = current_measurement['measurement']['aqi']
+    if aqi > aqi_limit:
+        print(f"AQI Alert! Current AQI is {aqi}")
+        player.play_audio()
+    else:
+        print('AQI is below threshold... continuing')
+
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=aqm.save_measurement_to_redis, trigger="interval", seconds=60)
+scheduler.add_job(func=aqi_alert, trigger="interval", seconds=10)
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
+
 def pretty_timestamps(measurement):
-	timestamps = []
-	for x in measurement:
-		timestamp = x['measurement']['timestamp']
-		timestamps += [timestamp.split('.')[0]]
-	return timestamps
+    timestamps = []
+    for x in measurement:
+        timestamp = x['measurement']['timestamp']
+        timestamps += [timestamp.split('.')[0]]
+    return timestamps
 
 def reconfigure_data(measurement):
     """Reconfigures data for chart.js"""
@@ -65,7 +81,6 @@ def index():
 
 @app.route('/api/')
 @cross_origin()
-
 def api():
     """Returns historical data from the sensor"""
     context = {
